@@ -1,0 +1,10 @@
+// Local workspace template. Copy to go.work to use checked-out native modules.
+go 1.22
+
+use (
+	.
+	./native/darwin-arm64
+	./native/linux-amd64
+	./native/linux-arm64
+	./native/windows-amd64
+)
