@@ -1,6 +1,6 @@
 //go:build linux && amd64
 
-package seekdb
+package bundle
 
 import native "github.com/oceanbase/seekdb-go/native/linux-amd64"
 

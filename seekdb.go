@@ -1,12 +1,5 @@
 package seekdb
 
-/*
-#cgo linux LDFLAGS: -ldl
-#include <stdlib.h>
-#include "native_loader.h"
-*/
-import "C"
-
 import (
 	"errors"
 	"fmt"
@@ -14,7 +7,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"unsafe"
+
+	"github.com/oceanbase/seekdb-go/internal/native"
 )
 
 // OpenOptions supplies seekdb server parameters. Ordinary values apply on first initialization.
@@ -43,36 +37,8 @@ func (e *Error) Error() string { return e.Message }
 // DB owns a local seekdb lifecycle handle. Close client connections before Close.
 type DB struct {
 	mu     sync.Mutex
-	handle C.SeekdbHandle
+	handle native.Handle
 	DBDir  string
-}
-
-var nativeMu sync.Mutex
-var nativeReady bool
-
-func prepareNative() error {
-	nativeMu.Lock()
-	defer nativeMu.Unlock()
-	if nativeReady {
-		return nil
-	}
-	dir, err := unpackBundle()
-	if err != nil {
-		return err
-	}
-	library := C.CString(filepath.Join(dir, platformLibrary()))
-	defer C.free(unsafe.Pointer(library))
-	var message [4096]C.char
-	if rc := C.sdb_load(library, &message[0], C.size_t(len(message))); rc != C.SEEKDB_SUCCESS {
-		return fmt.Errorf("load libseekdb: %s", C.GoString(&message[0]))
-	}
-	binary := C.CString(filepath.Join(dir, platformExecutable()))
-	defer C.free(unsafe.Pointer(binary))
-	if rc := C.sdb_set_binary_path(binary); rc != C.SEEKDB_SUCCESS {
-		return fmt.Errorf("set seekdb executable path: code %d", int(rc))
-	}
-	nativeReady = true
-	return nil
 }
 
 // Open starts or reuses a local seekdb instance rooted at dbDir.
@@ -90,7 +56,7 @@ func Open(dbDir string, options ...OpenOptions) (*DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("resolve dbDir: %w", err)
 	}
-	if err := prepareNative(); err != nil {
+	if err := native.Prepare(); err != nil {
 		return nil, err
 	}
 	var parameters map[string]string
@@ -108,31 +74,13 @@ func Open(dbDir string, options ...OpenOptions) (*DB, error) {
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
-	cPairs := make([]*C.char, 0, 2*len(keys)+1)
+	pairs := make([]string, 0, 2*len(keys))
 	for _, key := range keys {
-		cPairs = append(cPairs, C.CString(key), C.CString(parameters[key]))
+		pairs = append(pairs, key, parameters[key])
 	}
-	cPairs = append(cPairs, nil)
-	defer func() {
-		for _, value := range cPairs {
-			C.free(unsafe.Pointer(value))
-		}
-	}()
-	cDir := C.CString(absolute)
-	defer C.free(unsafe.Pointer(cDir))
-	var handle C.SeekdbHandle
-	var message [4096]C.char
-	rc := C.sdb_open(cDir, (**C.char)(unsafe.Pointer(&cPairs[0])), &handle,
-		&message[0], C.size_t(len(message)))
-	if rc != C.SEEKDB_SUCCESS {
-		if handle != nil {
-			C.sdb_close(handle)
-		}
-		text := C.GoString(&message[0])
-		if text == "" {
-			text = "seekdb_open failed"
-		}
-		return nil, &Error{ReturnCode: int(rc), Message: text}
+	handle, err := native.Open(absolute, pairs)
+	if err != nil {
+		return nil, publicError(err)
 	}
 	return &DB{handle: handle, DBDir: absolute}, nil
 }
@@ -141,34 +89,31 @@ func Open(dbDir string, options ...OpenOptions) (*DB, error) {
 func (db *DB) ConnectionOptions() (ConnectionOptions, error) {
 	db.mu.Lock()
 	defer db.mu.Unlock()
-	if db.handle == nil {
+	if db.handle.IsZero() {
 		return ConnectionOptions{}, errors.New("seekdb is closed")
 	}
-	var native C.SeekdbConnectionOptions
-	if rc := C.sdb_connection_options(db.handle, &native); rc != C.SEEKDB_SUCCESS {
-		return ConnectionOptions{}, &Error{ReturnCode: int(rc), Message: "seekdb_connection_options failed"}
+	options, err := native.Options(db.handle)
+	if err != nil {
+		return ConnectionOptions{}, publicError(err)
 	}
-	return ConnectionOptions{
-		Transport:  C.GoString(native.transport),
-		User:       C.GoString(native.user),
-		Host:       C.GoString(native.host),
-		Port:       uint(native.port),
-		UnixSocket: C.GoString(native.unix_socket),
-		NamedPipe:  C.GoString(native.named_pipe),
-	}, nil
+	return ConnectionOptions(options), nil
 }
 
 // Close releases this handle; repeated calls are harmless. It does not delete data.
 func (db *DB) Close() error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
-	if db.handle == nil {
+	if db.handle.IsZero() {
 		return nil
 	}
-	rc := C.sdb_close(db.handle)
-	db.handle = nil
-	if rc != C.SEEKDB_SUCCESS {
-		return &Error{ReturnCode: int(rc), Message: "seekdb_close failed"}
+	err := native.Close(db.handle)
+	db.handle = native.Handle{}
+	return publicError(err)
+}
+
+func publicError(err error) error {
+	if nativeErr, ok := err.(*native.Error); ok {
+		return &Error{ReturnCode: nativeErr.ReturnCode, Message: nativeErr.Message}
 	}
-	return nil
+	return err
 }

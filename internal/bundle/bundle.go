@@ -1,4 +1,5 @@
-package seekdb
+// Package bundle prepares the platform's bundled runtime in the user cache.
+package bundle
 
 import (
 	"archive/tar"
@@ -28,16 +29,30 @@ type bundleManifest struct {
 	Files        map[string]bundleFile `json:"files"`
 }
 
-func unpackBundle() (string, error) {
+// Paths identifies the extracted native library and server executable.
+type Paths struct {
+	Library    string
+	Executable string
+}
+
+// Prepare validates or repairs the cached runtime and returns its file paths.
+func Prepare() (Paths, error) {
 	archive := platformBundle()
 	if len(archive) == 0 {
-		return "", fmt.Errorf("seekdb has no native bundle for this platform")
+		return Paths{}, fmt.Errorf("seekdb has no native bundle for this platform")
 	}
 	cacheRoot, err := os.UserCacheDir()
 	if err != nil {
-		return "", fmt.Errorf("find cache directory: %w", err)
+		return Paths{}, fmt.Errorf("find cache directory: %w", err)
 	}
-	return installBundle(filepath.Join(cacheRoot, "seekdb-go"), archive)
+	dir, err := installBundle(filepath.Join(cacheRoot, "seekdb-go"), archive)
+	if err != nil {
+		return Paths{}, err
+	}
+	return Paths{
+		Library:    filepath.Join(dir, platformLibrary()),
+		Executable: filepath.Join(dir, platformExecutable()),
+	}, nil
 }
 
 func installBundle(root string, archive []byte) (string, error) {
