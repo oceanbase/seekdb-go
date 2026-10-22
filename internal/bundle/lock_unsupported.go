@@ -1,6 +1,6 @@
 //go:build !darwin && !linux && !windows
 
-package seekdb
+package bundle
 
 func lockNativeCache(string) (func(), error) {
 	return func() {}, nil

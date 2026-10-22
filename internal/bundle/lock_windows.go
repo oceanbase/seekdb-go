@@ -1,6 +1,6 @@
 //go:build windows
 
-package seekdb
+package bundle
 
 import (
 	"fmt"
