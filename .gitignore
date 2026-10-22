@@ -1,0 +1,7 @@
+.DS_Store
+/build/
+/tmp/
+__pycache__/
+*.pyc
+/go.work
+/go.work.sum
