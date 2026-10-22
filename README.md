@@ -11,8 +11,16 @@ go get github.com/oceanbase/seekdb-go@latest
 ```
 
 Until the first tagged root-module release, `@latest` resolves to a Go pseudo-version.
-The native dependencies use the published `v1.4.0` platform-module tags, with
-checksums in `go.sum`.
+To pin the root `v1.4.0` release after its tag is published:
+
+```sh
+go get github.com/oceanbase/seekdb-go@v1.4.0
+```
+
+Root SDK `v1.4.0` pins all four native modules at the already published
+`v1.4.0` platform-module tags, with checksums in `go.sum`. Root SDK and native
+versions are independent; a Go-only release can reuse existing native versions.
+See the [changelog](CHANGELOG.md) for the release contents and known issues.
 
 Building requires Go 1.22 or newer, `CGO_ENABLED=1`, and a C compiler targeting
 the same OS and architecture as Go:
