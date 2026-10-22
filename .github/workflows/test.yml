@@ -69,14 +69,12 @@ jobs:
           mkdir -p "$SEEKDB_TEST_ARTIFACT_DIR"
           go test -mod=readonly -v -count=1 -timeout=10m ./... 2>&1 | tee "$SEEKDB_TEST_ARTIFACT_DIR/api.log"
           (cd examples/sql && go test -mod=readonly -v -count=1 -timeout=10m .) 2>&1 | tee "$SEEKDB_TEST_ARTIFACT_DIR/sql.log"
-      - name: Test macOS packaging architecture checks
-        if: runner.os == 'macOS'
+      - name: Set up Python for packaging checks
         uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - name: Verify real Mach-O packaging inputs
-        if: runner.os == 'macOS'
-        run: python3 -m unittest discover -s scripts/tests -p test_packaging.py -v
+      - name: Test portable release input validation and native packaging
+        run: python -m unittest discover -s scripts/tests -p test_packaging.py -v
       - name: Preserve failed test diagnostics
         if: failure()
         uses: actions/upload-artifact@v7

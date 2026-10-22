@@ -43,6 +43,10 @@ dependencies.
 Every macOS executable and dylib must contain an arm64 slice; universal binaries
 with an arm64 slice are accepted. Direct packaging, dependency collection and
 supplied-release-input validation all enforce this requirement.
+Publishing already-built bundles does not require macOS tools: the release
+input verifier reads thin and universal Mach-O headers in Python and compares
+the input files with the committed archive bytes. The lipo/otool dependency
+checks remain part of macOS packaging and dependency collection.
 Update the platform license and notice files when runtime dependencies change.
 Each platform module has its own `go.mod` and is published by a tag prefixed
 with its directory, for example
