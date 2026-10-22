@@ -1,6 +1,7 @@
 # Releasing
 
-Run the commands below from the repository root. For the local Go workspace and
+Run the commands below from the repository root with Python 3.10+ and Go 1.22+.
+For the local Go workspace and
 checks to run before releasing, see [Development](development.md).
 
 Builds take local runtime files. Arrange them by target platform, with the
@@ -45,10 +46,33 @@ with its directory, for example
 `native/linux-amd64/v1.4.0`. The root module uses a root tag such as `v1.4.0`.
 Publish changed native bundles under new, immutable versions.
 
-After CI passes on `main`, run
-`scripts/release.sh ROOT_VERSION NATIVE_VERSION /path/to/release-inputs [REMOTE]`.
-The script compares every bundled native file with the supplied local inputs,
-publishes immutable platform tags, updates the root `go.mod` and `go.sum`, and
-tests the tagged dependencies. If those dependency files change, commit them
-through a PR and rerun the script after merging; it then publishes the root
-tag. Repeating the command does not move existing tags.
+The native dependencies use the published `v1.4.0` platform-module tags. Keep
+the dependency versions and their generated `go.sum` checksums committed before
+publishing a root-module release.
+
+Publishing has two stages:
+
+1. Start from a clean checkout of the current remote `main`, after the Test CI
+   passes. Run
+   `scripts/release.sh ROOT_VERSION NATIVE_VERSION /path/to/release-inputs [REMOTE]`.
+   It verifies the inputs, publishes the four immutable native tags, and updates
+   `go.mod`/`go.sum` using direct fetching. If dependencies change, it stops
+   **before publishing the root tag**. Commit the dependency files through a PR.
+2. After merging that PR, wait for both Test and **Public install validation**
+   on the exact main commit. The latter downloads the root commit through
+   `proxy.golang.org` with `sum.golang.org`, using a separate consumer and fresh
+   caches, and checks SQL persistence on all four platforms. Rerun the release
+   command from that commit. It refuses root publication unless the latest main
+   push runs of both workflows succeeded, and checks that remote main still matches.
+
+The workflow gate reads the GitHub Actions API. For API rate limits, or a private
+repository, set `GITHUB_TOKEN` or `GH_TOKEN` with Actions read permission. The
+token is never passed as a command-line argument. A manual workflow run for some
+other revision cannot satisfy the exact-main-commit release gate.
+
+The public Go proxy may take time to observe newly published native tags. Wait
+for successful public validation instead of bypassing it with `GOPRIVATE` or
+reusing the release machine's module cache. Repeating the release command does
+not move existing tags. Root `v*` tags trigger the same public-install validation
+using the exact tag; before announcing a release, also dispatch it with `latest`
+to verify the default user-facing selector.

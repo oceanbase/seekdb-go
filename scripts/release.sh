@@ -31,6 +31,16 @@ fi
 python3 scripts/verify_bundles.py --input-root "$input_root"
 git fetch --quiet --tags "$remote"
 
+require_remote_main() {
+    local remote_main
+    remote_main="$(git ls-remote --exit-code "$remote" refs/heads/main | cut -f1)"
+    if [ "$remote_main" != "$(git rev-parse HEAD)" ]; then
+        echo "release must use the current ${remote}/main commit" >&2
+        exit 1
+    fi
+}
+require_remote_main
+
 platforms=(darwin-arm64 linux-amd64 linux-arm64 windows-amd64)
 if git rev-parse -q --verify "refs/tags/${root_version}" >/dev/null &&
    [ "$(git rev-parse "refs/tags/${root_version}^{commit}")" != "$(git rev-parse HEAD)" ]; then
@@ -71,7 +81,9 @@ if [ -n "$(git status --porcelain -- go.mod go.sum)" ]; then
     exit 1
 fi
 
-go test -count=1 ./...
+go test -mod=readonly -count=1 ./...
+python3 scripts/check_release_ready.py "$(git remote get-url "$remote")" "$(git rev-parse HEAD)"
+require_remote_main
 if ! git rev-parse -q --verify "refs/tags/${root_version}" >/dev/null; then
     git tag "$root_version"
 fi
