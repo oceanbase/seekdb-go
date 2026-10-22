@@ -45,9 +45,14 @@ jobs:
           go-version: '1.22'
           cache: false
       - name: Test checked-out platform bundle
+        env:
+          SEEKDB_TEST_ARTIFACT_DIR: ${{ runner.temp }}/seekdb-tests/checked-out
         run: |
           cp go.work.dev go.work
-          go test -count=1 ./...
+          set -o pipefail
+          mkdir -p "$SEEKDB_TEST_ARTIFACT_DIR"
+          go test -v -count=1 -timeout=10m ./... 2>&1 | tee "$SEEKDB_TEST_ARTIFACT_DIR/api.log"
+          (cd examples/sql && go test -v -count=1 -timeout=10m .) 2>&1 | tee "$SEEKDB_TEST_ARTIFACT_DIR/sql.log"
       - name: Test downloaded native modules
         env:
           GOWORK: 'off'
@@ -58,4 +63,23 @@ jobs:
           GONOPROXY: ''
           GONOSUMDB: ''
           GOINSECURE: ''
-        run: go test -mod=readonly -count=1 ./...
+          SEEKDB_TEST_ARTIFACT_DIR: ${{ runner.temp }}/seekdb-tests/downloaded
+        run: |
+          set -o pipefail
+          mkdir -p "$SEEKDB_TEST_ARTIFACT_DIR"
+          go test -mod=readonly -v -count=1 -timeout=10m ./... 2>&1 | tee "$SEEKDB_TEST_ARTIFACT_DIR/api.log"
+          (cd examples/sql && go test -mod=readonly -v -count=1 -timeout=10m .) 2>&1 | tee "$SEEKDB_TEST_ARTIFACT_DIR/sql.log"
+      - name: Set up Python for packaging checks
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Test portable release input validation and native packaging
+        run: python -m unittest discover -s scripts/tests -p test_packaging.py -v
+      - name: Preserve failed test diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-failure-${{ matrix.platform }}
+          path: |
+            ${{ runner.temp }}/seekdb-tests/**/*.log
+            ${{ runner.temp }}/seekdb-tests/**/log/

@@ -40,6 +40,13 @@ python3 scripts/verify_bundles.py --input-root /path/to/release-inputs
 The build updates the bundle checksums in the [root README](../README.md).
 It checks binary architectures, macOS library install names, and Linux `$ORIGIN`
 dependencies.
+Every macOS executable and dylib must contain an arm64 slice; universal binaries
+with an arm64 slice are accepted. Direct packaging, dependency collection and
+supplied-release-input validation all enforce this requirement.
+Publishing already-built bundles does not require macOS tools: the release
+input verifier reads thin and universal Mach-O headers in Python and compares
+the input files with the committed archive bytes. The lipo/otool dependency
+checks remain part of macOS packaging and dependency collection.
 Update the platform license and notice files when runtime dependencies change.
 Each platform module has its own `go.mod` and is published by a tag prefixed
 with its directory, for example
@@ -76,3 +83,26 @@ reusing the release machine's module cache. Repeating the release command does
 not move existing tags. Root `v*` tags trigger the same public-install validation
 using the exact tag; before announcing a release, also dispatch it with `latest`
 to verify the default user-facing selector.
+
+Before announcing a release:
+
+- Move the relevant `Unreleased` entries in [CHANGELOG](../CHANGELOG.md) into the
+  chosen root version. Include the pinned native versions and known upstream
+  issues; a native version is not the Go API's version.
+- Check [support](support.md) against the actual release evidence. Record which
+  minimum-version environments were exercised. A newer runner does not validate
+  the macOS 15.6.1 or glibc 2.28 runtime floor, and unqualified environments must
+  not be presented as verified.
+- Preserve input provenance with the release artifacts: seekdb and libseekdb
+  source revisions, native build identifiers, compiler/SDK versions, dependency
+  versions, platform input hashes and final bundle hashes. The existing
+  prebuilt archives do not by themselves establish their source revisions or
+  complete build-tool versions; obtain those from the producer rather than
+  inferring them from the module tag.
+- Review each platform's LICENSE/NOTICE files when changing dependencies.
+  The current Linux archives include the OpenSSL 1.1 family; record the exact
+  dependency versions from the supplied build before replacing those inputs.
+
+The bootstrap issue in [seekdb #1544](https://github.com/oceanbase/seekdb/issues/1544)
+is tracked as a native known issue. Keep that disclosure when publishing a Go
+release that uses the affected native package.

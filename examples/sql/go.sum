@@ -1,0 +1,16 @@
+filippo.io/edwards25519 v1.1.0 h1:FNf4tywRC1HmFuKW5xopWpigGjJKiJSV0Cqo0cJWDaA=
+filippo.io/edwards25519 v1.1.0/go.mod h1:BxyFTGdWcka3PhytdK4V28tE5sGfRvvvRV7EaN4VDT4=
+github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
+github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
+github.com/go-sql-driver/mysql v1.9.3 h1:U/N249h2WzJ3Ukj8SowVFjdtZKfu9vlLZxjPXV1aweo=
+github.com/go-sql-driver/mysql v1.9.3/go.mod h1:qn46aNg1333BRMNU69Lq93t8du/dwxI64Gl8i5p1WMU=
+github.com/oceanbase/seekdb-go/native/darwin-arm64 v1.4.0 h1:8Bl7Qq0i0P+WyfTw/utGIiP7uYg2ucBms6erX7d8Wx0=
+github.com/oceanbase/seekdb-go/native/darwin-arm64 v1.4.0/go.mod h1:PpAFEE3avX+g6h6YC93N6bdk/EgDpK3jYIKdR1SE+ng=
+github.com/oceanbase/seekdb-go/native/linux-amd64 v1.4.0 h1:VmNPuCw1fT28+B9SHRSoOaVmVYP0mW3eN8GgIusveXw=
+github.com/oceanbase/seekdb-go/native/linux-amd64 v1.4.0/go.mod h1:abpv7arQNzokc1zqUXDAZimVqA17HxsokLCleIw1nOs=
+github.com/oceanbase/seekdb-go/native/linux-arm64 v1.4.0 h1:7391aFiybN4TxS5SKq5jJyS7leJf/9QXFN47z9bORt0=
+github.com/oceanbase/seekdb-go/native/linux-arm64 v1.4.0/go.mod h1:U6ZcWM2QzkiwE4Qkp+WnhLG+ntDKYtyN+rrfcLjG6ik=
+github.com/oceanbase/seekdb-go/native/windows-amd64 v1.4.0 h1:dDpe9kpliS/PaY5FrXbHdYBw+WHn9hHZlcaFbH7UDoA=
+github.com/oceanbase/seekdb-go/native/windows-amd64 v1.4.0/go.mod h1:URCEyRIQtMQ+2vs2xs8khzidOZ/sI+Wqu0UGO/ANR+A=
+golang.org/x/sys v0.10.0 h1:SqMFp9UcQJZa+pmYuAKjd9xq1f0j5rLcDIk0mj4qAsA=
+golang.org/x/sys v0.10.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=

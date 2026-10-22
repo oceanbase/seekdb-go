@@ -3,6 +3,7 @@ go 1.22
 
 use (
 	.
+	./examples/sql
 	./native/darwin-arm64
 	./native/linux-amd64
 	./native/linux-arm64

@@ -14,11 +14,22 @@ Until the first tagged root-module release, `@latest` resolves to a Go pseudo-ve
 The native dependencies use the published `v1.4.0` platform-module tags, with
 checksums in `go.sum`.
 
-Building requires Go 1.22 or newer, `CGO_ENABLED=1`, and a C compiler. Native
-bundles are available for macOS arm64, Linux amd64/arm64, and Windows amd64.
-The current macOS arm64 bundle requires macOS 15.6.1 or newer.
-The Linux bundles require glibc 2.28 or newer and do not support musl/Alpine.
-The Windows bundle requires the Microsoft Visual C++ runtime.
+Building requires Go 1.22 or newer, `CGO_ENABLED=1`, and a C compiler targeting
+the same OS and architecture as Go:
+
+| Target | Build compiler | Native runtime requirements |
+| --- | --- | --- |
+| macOS arm64 | Apple clang / Xcode Command Line Tools | macOS 15.6.1+ |
+| Linux amd64/arm64 | GCC or clang for the target architecture | glibc 2.28+; musl/Alpine is unsupported |
+| Windows amd64 | MinGW-w64 GCC targeting x86_64 | Microsoft Visual C++ v14 x64 runtime |
+
+On Windows, put MinGW-w64 GCC on `PATH`, set `CC=gcc` and `CGO_ENABLED=1`
+in the build environment. The Visual C++ runtime is needed to run the bundled
+server; it does not supply the GCC compiler needed by Go's cgo build.
+See [support and known limitations](docs/support.md) for tested environments
+and the distinction between binary requirements and runtime verification.
+For Linux deployment to glibc 2.28, compile the cgo application against that
+baseline too; a newer build host can introduce newer libc requirements.
 
 ```go
 package main
@@ -47,6 +58,26 @@ func main() {
 
 `Open` creates the database directory when needed and reopens existing data.
 Close SQL client connections before calling `Close`.
+
+## SQL example
+
+The [complete SQL example](examples/sql) uses `go-sql-driver/mysql` and connects
+using the fields returned by `ConnectionOptions`. The current POSIX bundles
+return a Unix socket. The current Windows bundle defaults to TCP on
+`127.0.0.1` with a dynamically selected port. Do not hard-code a named pipe or
+port number.
+
+From a checkout, run:
+
+```sh
+cd examples/sql
+go run -mod=readonly . -db ../../sql-example-data
+```
+
+It creates a table, inserts parameterized Unicode text, closes the SQL client
+and database, reopens the database, and checks the persisted value. Its separate
+Go module keeps SQL-driver dependencies out of the core SDK. See the
+[example instructions](examples/sql/README.md) for use in your own application.
 
 ## Native modules
 
@@ -80,10 +111,12 @@ include OpenSSL 1.1, libaio, and zlib.
 CI runs `Open`, `ConnectionOptions`, `Close`, and reopen tests on all four target
 platforms using checked-out bundles. CI also always tests downloaded native
 modules with the workspace disabled. A separate public-install workflow uses
-fresh module and build caches to download the root module, execute SQL and
-verify persisted data after reopening on all four platforms. These checks use
-the transport returned by `ConnectionOptions`, including a MySQL-protocol
-connection when the endpoint is a Windows named pipe.
+fresh module and build caches to download the root module. Both paths run real
+SQL integration checks for prepared statements, Unicode, CRUD, transaction
+commit/rollback, vector queries, shared handles and persisted data after
+reopening. The checks use the transport returned by `ConnectionOptions`.
+The sample includes a Windows named-pipe adapter for endpoints that request it;
+the shipped Windows bundle and current integration coverage use TCP.
 
 | Bundle | SHA-256 |
 | --- | --- |

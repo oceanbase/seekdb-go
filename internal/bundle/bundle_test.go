@@ -6,9 +6,13 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"context"
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func testBundle(t *testing.T) []byte {
@@ -100,5 +104,62 @@ func TestInstallBundleUsesReadOnlyCompleteCache(t *testing.T) {
 	t.Cleanup(func() { os.Chmod(root, 0700) })
 	if _, err := installBundle(root, archive); err != nil {
 		t.Fatalf("use complete cache without write permission: %v", err)
+	}
+}
+
+func TestInstallBundleConcurrentProcesses(t *testing.T) {
+	if root := os.Getenv("SEEKDB_CACHE_TEST_ROOT"); root != "" {
+		archive, err := os.ReadFile(os.Getenv("SEEKDB_CACHE_TEST_ARCHIVE"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		target, err := installBundle(root, archive)
+		if err != nil {
+			t.Fatal(err)
+		}
+		contents, err := os.ReadFile(filepath.Join(target, "libruntime.so"))
+		if err != nil || string(contents) != "runtime" {
+			t.Fatalf("installed runtime = %q, %v", contents, err)
+		}
+		return
+	}
+	root := t.TempDir()
+	archivePath := filepath.Join(root, "bundle.tar.gz")
+	if err := os.WriteFile(archivePath, testBundle(t), 0600); err != nil {
+		t.Fatal(err)
+	}
+	executable, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	start := make(chan struct{})
+	results := make(chan error, 4)
+	for i := 0; i < 4; i++ {
+		go func() {
+			<-start
+			command := exec.CommandContext(ctx, executable, "-test.run=^TestInstallBundleConcurrentProcesses$")
+			command.Env = append(os.Environ(), "SEEKDB_CACHE_TEST_ROOT="+filepath.Join(root, "cache"), "SEEKDB_CACHE_TEST_ARCHIVE="+archivePath)
+			output, err := command.CombinedOutput()
+			if err != nil {
+				err = fmt.Errorf("cache installer: %w\n%s", err, output)
+			}
+			results <- err
+		}()
+	}
+	close(start)
+	for i := 0; i < 4; i++ {
+		if err := <-results; err != nil {
+			t.Error(err)
+		}
+	}
+	entries, err := os.ReadDir(filepath.Join(root, "cache"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Exactly one complete hash directory and the persistent lock should remain.
+	if len(entries) != 2 {
+		t.Fatalf("concurrent extraction left %d cache entries, want 2", len(entries))
 	}
 }

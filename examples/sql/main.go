@@ -61,15 +61,15 @@ func verify(dir string) (err error) {
 		}
 	}()
 	for _, statement := range []string{
-		"CREATE DATABASE install_check CHARACTER SET utf8mb4",
-		"CREATE TABLE install_check.records (id INT PRIMARY KEY, value VARCHAR(128))",
+		"CREATE DATABASE IF NOT EXISTS install_check CHARACTER SET utf8mb4",
+		"CREATE TABLE IF NOT EXISTS install_check.records (id INT PRIMARY KEY, value VARCHAR(128))",
 	} {
 		if _, err := client.Exec(statement); err != nil {
 			return err
 		}
 	}
 	const expected = "seekdb 安装验证 🐬"
-	if _, err := client.Exec("INSERT INTO install_check.records VALUES (?, ?)", 1, expected); err != nil {
+	if _, err := client.Exec("INSERT INTO install_check.records VALUES (?, ?) ON DUPLICATE KEY UPDATE value=VALUES(value)", 1, expected); err != nil {
 		return err
 	}
 	if err := client.Close(); err != nil {

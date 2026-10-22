@@ -143,6 +143,8 @@ def resolve_mac(name: str, origin: Path, executable: Path, search: list[Path]) -
 
 def verify_mac(stage: Path) -> None:
     for path in libraries(stage):
+        if "arm64" not in run("lipo", "-archs", str(path)).split():
+            raise ValueError(f"{path} does not contain arm64")
         for name in mac_dependencies(path):
             if mac_system(name) or Path(name).name == path.name:
                 continue
@@ -177,8 +179,6 @@ def collect_mac(stage: Path, support: Path, executable: Path, search: list[Path]
             if current_id != replacement_id:
                 run("install_name_tool", "-id", replacement_id, str(path))
                 changed = True
-        if "arm64" not in run("lipo", "-archs", str(path)).split():
-            raise ValueError(f"{path} does not contain arm64")
         if changed:
             run("codesign", "--force", "--sign", "-", "--timestamp=none", str(path))
     verify_mac(stage)
