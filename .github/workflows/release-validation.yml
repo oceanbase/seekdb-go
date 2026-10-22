@@ -56,3 +56,4 @@ jobs:
             ${{ runner.temp }}/seekdb-install/go.mod
             ${{ runner.temp }}/seekdb-install/go.sum
             ${{ runner.temp }}/seekdb-install/database/log/
+            ${{ runner.temp }}/seekdb-install/diagnostics/**/log/

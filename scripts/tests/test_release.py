@@ -89,7 +89,8 @@ class PublicInstallTests(unittest.TestCase):
             calls = run.call_args_list
             self.assertEqual(calls[0].args[0], ["go", "mod", "init", "seekdb-install-check"])
             self.assertIn(f"github.com/oceanbase/seekdb-go@{SHA}", calls[1].args[0])
-            self.assertEqual(calls[2].args[0][:4], ["go", "run", "-mod=readonly", "."])
+            self.assertEqual(calls[2].args[0], ["go", "test", "-mod=readonly", "-v", "-count=1", "-timeout=10m", "."])
+            self.assertEqual(calls[3].args[0][:4], ["go", "run", "-mod=readonly", "."])
             env = calls[0].args[2]
             self.assertEqual(env["GOWORK"], "off")
             self.assertEqual(env["GOENV"], "off")
@@ -102,6 +103,7 @@ class PublicInstallTests(unittest.TestCase):
                 self.assertFalse(Path(env[name]).exists())
             self.assertTrue((work / "main.go").exists())
             self.assertTrue((work / "pipe_windows.go").exists())
+            self.assertTrue((work / "integration_test.go").exists())
             self.assertFalse((work / "go.work").exists())
 
     def test_refuses_a_reused_work_directory(self):

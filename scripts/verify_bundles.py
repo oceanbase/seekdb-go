@@ -8,7 +8,8 @@ import tarfile
 from pathlib import Path
 
 from build_release_bundles import LABELS
-from package_native import PLATFORMS, bundle_files
+from native_deps import verify_mac
+from package_native import PLATFORMS, bundle_files, verify_machine
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -49,6 +50,10 @@ def verify(platform: str, readme: str, input_root: Path | None) -> None:
         if input_root is not None:
             input_dir = input_root / platform
             files = bundle_files(platform, input_dir)
+            for path in files:
+                verify_machine(platform, path)
+            if platform == "darwin-arm64":
+                verify_mac(input_dir)
             expected = {
                 ("seekdb.bin" if path.name == executable and platform != "windows-amd64" else path.name): path
                 for path in files

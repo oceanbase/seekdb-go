@@ -6,8 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -45,8 +47,7 @@ func TestZeroValueDB(t *testing.T) {
 }
 
 func TestOpenConnectionOptionsAndClose(t *testing.T) {
-	root := t.TempDir()
-	dir := filepath.Join(root, "database")
+	dir := testDatabaseDirectory(t)
 	db, err := seekdb.Open(dir)
 	if err != nil {
 		t.Fatal(err)
@@ -98,5 +99,73 @@ func TestOpenConnectionOptionsAndClose(t *testing.T) {
 	}
 	if err := reopened.Close(); err != nil {
 		t.Fatalf("close reopened database: %v", err)
+	}
+}
+
+// Unlike t.TempDir, failed instances survive cleanup, including failed Open calls.
+func testDatabaseDirectory(t *testing.T) string {
+	t.Helper()
+	base := os.Getenv("SEEKDB_TEST_ARTIFACT_DIR")
+	if base != "" {
+		if err := os.MkdirAll(base, 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	root, err := os.MkdirTemp(base, "seekdb-"+t.Name()+"-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("instance diagnostics: %s", root)
+	t.Cleanup(func() {
+		if t.Failed() {
+			t.Logf("failed instance retained at %s", root)
+		} else if err := os.RemoveAll(root); err != nil {
+			t.Error(err)
+		}
+	})
+	return filepath.Join(root, "database")
+}
+
+func TestConcurrentConnectionOptionsAndClose(t *testing.T) {
+	db, err := seekdb.Open(testDatabaseDirectory(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := db.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+	start := make(chan struct{})
+	var workers sync.WaitGroup
+	for i := 0; i < 8; i++ {
+		workers.Add(1)
+		go func() {
+			defer workers.Done()
+			<-start
+			for j := 0; j < 100; j++ {
+				options, err := db.ConnectionOptions()
+				if err == nil && options.Transport == "" {
+					t.Error("successful ConnectionOptions returned an empty transport")
+				} else if err != nil && err.Error() != "seekdb is closed" {
+					t.Errorf("ConnectionOptions during Close: %v", err)
+				}
+			}
+		}()
+	}
+	for i := 0; i < 2; i++ {
+		workers.Add(1)
+		go func() {
+			defer workers.Done()
+			<-start
+			if err := db.Close(); err != nil {
+				t.Errorf("concurrent Close: %v", err)
+			}
+		}()
+	}
+	close(start)
+	workers.Wait()
+	if _, err := db.ConnectionOptions(); err == nil {
+		t.Fatal("ConnectionOptions succeeded after concurrent Close")
 	}
 }

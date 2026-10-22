@@ -44,13 +44,15 @@ def verify(revision: str, work: Path) -> None:
     work.mkdir(parents=True, exist_ok=True)
     if any(work.iterdir()):
         raise ValueError(f"installation work directory must be empty: {work}")
-    for source in (ROOT / "testdata/install").glob("*.go"):
+    for source in (ROOT / "examples/sql").glob("*.go"):
         shutil.copy2(source, work / source.name)
     env = public_environment(work)
     run(["go", "mod", "init", "seekdb-install-check"], work, env)
     run(["go", "get", f"{MODULE}@{revision}",
          "github.com/go-sql-driver/mysql@v1.9.3",
          "github.com/Microsoft/go-winio@v0.6.2"], work, env)
+    env["SEEKDB_TEST_ARTIFACT_DIR"] = str(work / "diagnostics")
+    run(["go", "test", "-mod=readonly", "-v", "-count=1", "-timeout=10m", "."], work, env)
     run(["go", "run", "-mod=readonly", ".", "-db", str(work / "database")], work, env)
 
 
