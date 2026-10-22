@@ -5,7 +5,9 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
+	"time"
 
 	seekdb "github.com/oceanbase/seekdb-go"
 )
@@ -26,8 +28,21 @@ func databaseDirectory(t *testing.T) string {
 	t.Cleanup(func() {
 		if t.Failed() {
 			t.Logf("failed instance retained at %s", root)
-		} else if err := os.RemoveAll(root); err != nil {
-			t.Error(err)
+			return
+		}
+		// Windows can hold a server log briefly after Close returns. Only
+		// filesystem cleanup is retried; failed Open calls are never retried.
+		deadline := time.Now().Add(5 * time.Second)
+		for {
+			err := os.RemoveAll(root)
+			if err == nil {
+				return
+			}
+			if runtime.GOOS != "windows" || time.Now().After(deadline) {
+				t.Errorf("remove successful instance %s: %v", root, err)
+				return
+			}
+			time.Sleep(100 * time.Millisecond)
 		}
 	})
 	return filepath.Join(root, "database")
