@@ -72,6 +72,19 @@ Publishing has two stages:
    command from that commit. It refuses root publication unless the latest main
    push runs of both workflows succeeded, and checks that remote main still matches.
 
+For the first root release, the prepared versions are root `v1.4.0` and native
+`v1.4.0`. The four native tags already exist; the root release reuses their
+unchanged contents. The versioned notes are in [CHANGELOG](../CHANGELOG.md).
+Once the exact main commit has passed both workflows, use:
+
+```sh
+scripts/release.sh v1.4.0 v1.4.0 /path/to/release-inputs
+```
+
+Updating the release notes does not publish the root tag. Run the command only
+when ready to publish, then complete the tag and `latest` installation checks
+below before announcing the release.
+
 The workflow gate reads the GitHub Actions API. For API rate limits, or a private
 repository, set `GITHUB_TOKEN` or `GH_TOKEN` with Actions read permission. The
 token is never passed as a command-line argument. A manual workflow run for some
