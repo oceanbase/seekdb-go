@@ -9,17 +9,26 @@ on first initialization; allow additional process memory and disk space.
 | Platform | Binary requirement | Functional verification environment |
 | --- | --- | --- |
 | macOS arm64 | macOS 15.6.1+ | CI: macos-26; manual: macOS 27.0.1, Apple clang 17 |
-| Linux amd64 | glibc 2.28+ | CI: Ubuntu 24.04; manual: Alibaba Cloud Linux 3, glibc 2.32, GCC 9.4 |
+| Linux amd64 | glibc 2.28+ | CI: Ubuntu 24.04; manual: Alibaba Cloud Linux 3/glibc 2.32/GCC 9.4 and AlmaLinux 8 container/glibc 2.28/GCC 8.5 |
 | Linux arm64 | glibc 2.28+ | CI: Ubuntu 24.04 arm64 |
 | Windows amd64 | x64 Windows with Microsoft Visual C++ v14 x64 runtime | CI: windows-2025; manual: Windows 11 26H2, MinGW GCC 16.2 |
 
-The macOS and glibc floors describe native binary requirements. Newer CI
-systems do not prove that every feature works on those minimum OS/library
-versions. Minimum-version acceptance must be recorded separately when making
-a release support claim. Windows versions older than the environments listed
+The macOS and glibc floors describe native binary requirements. The amd64 SQL
+suite was compiled and run inside the AlmaLinux 8 container on 2026-10-22,
+including transactions, vectors, shared handles and reopen persistence. This
+verifies the glibc 2.28 userland on the dev host's Linux 5.10 kernel; it does not
+qualify older kernels. The macOS 15.6.1 runtime floor and arm64 glibc 2.28
+userland have not been exercised directly. Newer CI systems do not establish
+minimum-version compatibility. Windows versions older than the environments listed
 above have not been qualified; this SDK does not claim support for every
 Windows release. macOS amd64, Windows arm64 and musl/Alpine bundles are not
 provided.
+
+A Linux application built with cgo also inherits requirements from its build
+compiler and libc. Build against the oldest glibc you intend to support. For
+example, the test executable linked on the glibc 2.32 host required GLIBC_2.32;
+rebuilding it inside glibc 2.28 allowed the same integration suite to pass there.
+The native bundle's baseline alone cannot lower an application's link target.
 
 The normal endpoint is a Unix socket on POSIX and loopback TCP with a random
 port on Windows. Consume `ConnectionOptions` instead of assuming that default.

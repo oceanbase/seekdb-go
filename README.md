@@ -28,6 +28,8 @@ in the build environment. The Visual C++ runtime is needed to run the bundled
 server; it does not supply the GCC compiler needed by Go's cgo build.
 See [support and known limitations](docs/support.md) for tested environments
 and the distinction between binary requirements and runtime verification.
+For Linux deployment to glibc 2.28, compile the cgo application against that
+baseline too; a newer build host can introduce newer libc requirements.
 
 ```go
 package main
