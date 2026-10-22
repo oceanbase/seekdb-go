@@ -10,9 +10,9 @@ driver of your choice for SQL queries.
 go get github.com/oceanbase/seekdb-go@latest
 ```
 
-Until the first tagged release, `@latest` resolves to a Go pseudo-version.
-The native dependencies are pinned to an existing, immutable commit, with
-checksums in `go.sum`; installation does not require unpublished native tags.
+Until the first tagged root-module release, `@latest` resolves to a Go pseudo-version.
+The native dependencies use the published `v1.4.0` platform-module tags, with
+checksums in `go.sum`.
 
 Building requires Go 1.22 or newer, `CGO_ENABLED=1`, and a C compiler. Native
 bundles are available for macOS arm64, Linux amd64/arm64, and Windows amd64.

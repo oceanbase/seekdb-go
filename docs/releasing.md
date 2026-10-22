@@ -46,9 +46,9 @@ with its directory, for example
 `native/linux-amd64/v1.4.0`. The root module uses a root tag such as `v1.4.0`.
 Publish changed native bundles under new, immutable versions.
 
-The initial native dependencies use Go pseudo-versions for an existing commit,
-so `go get ...@latest` works before any release tags exist. Keep these immutable
-pins and `go.sum` committed until a native tagged release is prepared.
+The native dependencies use the published `v1.4.0` platform-module tags. Keep
+the dependency versions and their generated `go.sum` checksums committed before
+publishing a root-module release.
 
 Publishing has two stages:
 

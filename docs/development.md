@@ -12,7 +12,7 @@ go test ./...
 ```
 
 Test the same pinned native modules that users download by bypassing the local
-workspace (no native tags are required for the initial pseudo-versions):
+workspace:
 
 ```sh
 GOWORK=off go test -mod=readonly -count=1 ./...
