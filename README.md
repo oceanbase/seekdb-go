@@ -6,11 +6,13 @@ driver of your choice for SQL queries.
 
 ## Install
 
-After the native modules and root module have been tagged in this repository:
-
 ```sh
 go get github.com/oceanbase/seekdb-go@latest
 ```
+
+Until the first tagged release, `@latest` resolves to a Go pseudo-version.
+The native dependencies are pinned to an existing, immutable commit, with
+checksums in `go.sum`; installation does not require unpublished native tags.
 
 Building requires Go 1.22 or newer, `CGO_ENABLED=1`, and a C compiler. Native
 bundles are available for macOS arm64, Linux amd64/arm64, and Windows amd64.
@@ -76,10 +78,12 @@ version until they upgrade it.
 The current bundles use seekdb 1.4.0.0-r1 runtime files. The Linux bundles
 include OpenSSL 1.1, libaio, and zlib.
 CI runs `Open`, `ConnectionOptions`, `Close`, and reopen tests on all four target
-platforms using checked-out bundles. Once the official native module tags and
-`go.sum` are present, CI also tests published native modules. The Windows test
-checks that the named pipe endpoint is present; it does not yet connect a MySQL
-protocol client through that pipe.
+platforms using checked-out bundles. CI also always tests downloaded native
+modules with the workspace disabled. A separate public-install workflow uses
+fresh module and build caches to download the root module, execute SQL and
+verify persisted data after reopening on all four platforms. These checks use
+the transport returned by `ConnectionOptions`, including a MySQL-protocol
+connection when the endpoint is a Windows named pipe.
 
 | Bundle | SHA-256 |
 | --- | --- |

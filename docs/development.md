@@ -11,15 +11,29 @@ cp go.work.dev go.work
 go test ./...
 ```
 
-After native module tags are published and `go.sum` is committed, test the same
-tagged modules that users download by bypassing the local workspace:
+Test the same pinned native modules that users download by bypassing the local
+workspace (no native tags are required for the initial pseudo-versions):
 
 ```sh
-GOWORK=off go test -count=1 ./...
+GOWORK=off go test -mod=readonly -count=1 ./...
 ```
 
 CI runs the checked-out module test on macOS arm64, Linux amd64/arm64, and
-Windows amd64. It runs the published module test when `go.sum` is present.
+Windows amd64. The downloaded-module test is mandatory on every run. Release
+script safety checks run with `python3 -m unittest discover -s scripts/tests -v`.
+
+The public-install workflow runs on main and root version tags. It can also be
+dispatched with a root version, commit SHA or `latest`. Reproduce it with Go,
+a C compiler, Python 3.10+ and network access to the public Go proxy and sumdb:
+
+```sh
+python3 scripts/verify_install.py ROOT_VERSION_OR_COMMIT
+```
+
+The check creates a separate consumer module with fresh module/build caches,
+disables local workspaces and private proxy bypasses, and verifies SQL data after
+closing and reopening the database. It does not use a local `replace`. Failed
+checks retain their working directory and diagnostics; CI uploads those logs.
 
 ## Repository layout
 

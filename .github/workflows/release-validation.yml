@@ -1,0 +1,58 @@
+name: Public install validation
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: Root module tag, commit SHA, or latest to install
+        required: true
+        default: latest
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    name: public-install-${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: darwin-arm64
+            runner: macos-26
+          - platform: linux-amd64
+            runner: ubuntu-24.04
+          - platform: linux-arm64
+            runner: ubuntu-24.04-arm
+          - platform: windows-amd64
+            runner: windows-2025
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.22'
+          cache: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install public module and verify SQL persistence
+        shell: bash
+        env:
+          REVISION: ${{ inputs.revision || (github.ref_type == 'tag' && github.ref_name) || github.sha }}
+          INSTALL_WORK: ${{ runner.temp }}/seekdb-install
+        run: python scripts/verify_install.py "$REVISION" --work-dir "$INSTALL_WORK"
+      - name: Preserve failed installation diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: install-failure-${{ matrix.platform }}
+          path: |
+            ${{ runner.temp }}/seekdb-install/install.log
+            ${{ runner.temp }}/seekdb-install/go.mod
+            ${{ runner.temp }}/seekdb-install/go.sum
+            ${{ runner.temp }}/seekdb-install/database/log/
