@@ -1,0 +1,76 @@
+name: Stage Go 1.4.1 bundles
+
+on:
+  push:
+    branches: [codex/stage-go-1.4.1]
+
+permissions:
+  contents: write
+
+jobs:
+  stage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+      - name: Download the four released C SDK archives and verify their digests
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          gh release download v1.4.1 --repo oceanbase/seekdb-bindings \
+            --pattern 'libseekdb-1.4.1-linux-*-glibc2.28-20261126T013358Z-sdbab58f3d233bc-bnd0d1cd473db05.tar.gz' \
+            --pattern 'libseekdb-1.4.1-macos-arm64-min15.0-20261126T013358Z-sdbab58f3d233bc-bnd0d1cd473db05.tar.gz' \
+            --pattern 'libseekdb-1.4.1-windows-x86_64-md-20261126T013358Z-sdbab58f3d233bc-bnd0d1cd473db05.tar.gz'
+          sha256sum --check <<'SHA256SUMS'
+          5e564f7103f44e176db8759d3f22a0555c9d31bbc4bb81b891211b555aac79ae  libseekdb-1.4.1-linux-aarch64-glibc2.28-20261126T013358Z-sdbab58f3d233bc-bnd0d1cd473db05.tar.gz
+          55fbd0f5e70f570f29483cadb36306f4462893bf1abc8db2dddb70a163ad3450  libseekdb-1.4.1-linux-x86_64-glibc2.28-20261126T013358Z-sdbab58f3d233bc-bnd0d1cd473db05.tar.gz
+          c56a78f9b8deb391d9ec6b50033378a671f5cb1f46c6ce14b191859ed0718eda  libseekdb-1.4.1-macos-arm64-min15.0-20261126T013358Z-sdbab58f3d233bc-bnd0d1cd473db05.tar.gz
+          f135d04bf52f98e06eca07cb469a7fd56fd6c842328756dc8b0cdcb297ab7728  libseekdb-1.4.1-windows-x86_64-md-20261126T013358Z-sdbab58f3d233bc-bnd0d1cd473db05.tar.gz
+          SHA256SUMS
+      - name: Commit reproducible bundle inputs to the preparation branch
+        run: |
+          set -euo pipefail
+          git switch -c codex/go-v1.4.1-bundles HEAD^
+          python3 - <<'PY'
+          import collections
+          import json
+          import os
+          import shutil
+          import sys
+          import tarfile
+          from pathlib import Path
+
+          sys.path.insert(0, "scripts")
+          from build_release_bundles import sha256, update_readme
+
+          platforms = {
+              "linux-aarch64": "linux-arm64",
+              "linux-x86_64": "linux-amd64",
+              "macos-arm64": "darwin-arm64",
+              "windows-x86_64": "windows-amd64",
+          }
+          checksums = {}
+          for label, platform in platforms.items():
+              asset, = Path(os.environ["RUNNER_TEMP"]).glob(f"libseekdb-1.4.1-{label}-*.tar.gz")
+              with tarfile.open(asset) as archive:
+                  build = json.load(archive.extractfile("BUILD-INFO.json"))
+                  assert build["seekdb_commit"] == "ab58f3d233bc77481ef409cef7c42abc59326902", build
+                  assert build["bindings_commit"].startswith("0d1cd473db05"), build
+                  assert build["engine_version"] == "1.4.1.0", build
+                  print(platform, build, flush=True)
+                  files = archive.getmembers()
+                  print(collections.Counter(member.name.split("/")[0] for member in files), flush=True)
+                  print([(member.name, oct(member.mode)) for member in files if member.name.startswith("lib/") or not (member.isdir() or member.isfile())], flush=True)
+              destination = Path("native", platform, "bundle.tar.gz")
+              shutil.copyfile(asset, destination)
+              checksums[platform] = sha256(destination)
+          update_readme(checksums)
+          PY
+          git add README.md native/*/bundle.tar.gz
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m 'Stage SeekDB 1.4.1 C SDK archives for Go'
+          git push origin HEAD:refs/heads/codex/go-v1.4.1-bundles
