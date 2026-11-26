@@ -9,7 +9,7 @@ require (
 )
 
 require (
-	filippo.io/edwards25519 v1.1.0 // indirect
+	filippo.io/edwards25519 v1.1.1 // indirect
 	github.com/oceanbase/seekdb-go/native/darwin-arm64 v1.4.1 // indirect
 	github.com/oceanbase/seekdb-go/native/linux-amd64 v1.4.1 // indirect
 	github.com/oceanbase/seekdb-go/native/linux-arm64 v1.4.1 // indirect
