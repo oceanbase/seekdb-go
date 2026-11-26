@@ -16,16 +16,20 @@ import (
 )
 
 func testBundle(t *testing.T) []byte {
-	t.Helper()
-	var compressed bytes.Buffer
-	gz := gzip.NewWriter(&compressed)
-	tw := tar.NewWriter(gz)
-	for name, contents := range map[string]string{
+	return makeTestBundle(t, map[string]string{
 		platformLibrary():    "library",
 		platformExecutable(): "#!/bin/sh\n",
 		"seekdb.bin":         "binary",
 		"libruntime.so":      "runtime",
-	} {
+	})
+}
+
+func makeTestBundle(t *testing.T, files map[string]string) []byte {
+	t.Helper()
+	var compressed bytes.Buffer
+	gz := gzip.NewWriter(&compressed)
+	tw := tar.NewWriter(gz)
+	for name, contents := range files {
 		header := &tar.Header{Name: name, Mode: 0755, Size: int64(len(contents)), Typeflag: tar.TypeReg}
 		if err := tw.WriteHeader(header); err != nil {
 			t.Fatal(err)
@@ -41,6 +45,41 @@ func testBundle(t *testing.T) []byte {
 		t.Fatal(err)
 	}
 	return compressed.Bytes()
+}
+
+func TestInstallCSDKBundleRepairsRuntimeResources(t *testing.T) {
+	const resource = "share/seekdb/srs/default_srs_data_mysql.sql"
+	archive := makeTestBundle(t, map[string]string{
+		"lib/" + platformLibrary():    "library",
+		"lib/" + platformExecutable(): "binary",
+		resource:                      "SRS data",
+	})
+	root := t.TempDir()
+	dir, err := installBundle(root, archive)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if filepath.Base(dir) != "lib" {
+		t.Fatalf("runtime directory = %q, want the C SDK lib directory", dir)
+	}
+	path := filepath.Join(filepath.Dir(dir), filepath.FromSlash(resource))
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := installBundle(root, archive); err != nil {
+		t.Fatal(err)
+	}
+	contents, err := os.ReadFile(path)
+	if err != nil || string(contents) != "SRS data" {
+		t.Fatalf("restored resource = %q, %v", contents, err)
+	}
+}
+
+func TestExtractArchiveRejectsTraversal(t *testing.T) {
+	archive := makeTestBundle(t, map[string]string{"lib/../outside": "invalid"})
+	if err := extractArchive(t.TempDir(), archive, "fixture"); err == nil {
+		t.Fatal("extractArchive accepted a path with a parent directory component")
+	}
 }
 
 func TestInstallBundleRepairsIncompleteCache(t *testing.T) {

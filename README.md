@@ -10,16 +10,14 @@ driver of your choice for SQL queries.
 go get github.com/oceanbase/seekdb-go@latest
 ```
 
-Until the first tagged root-module release, `@latest` resolves to a Go pseudo-version.
-To pin the root `v1.4.0` release after its tag is published:
+To pin a version of the root module:
 
 ```sh
 go get github.com/oceanbase/seekdb-go@v1.4.0
 ```
 
-Root SDK `v1.4.0` pins all four native modules at the already published
-`v1.4.0` platform-module tags, with checksums in `go.sum`. Root SDK and native
-versions are independent; a Go-only release can reuse existing native versions.
+The root SDK pins all four native modules, with checksums in `go.sum`. Root SDK
+and native versions are independent, so a Go-only release can reuse existing native versions.
 See the [changelog](CHANGELOG.md) for the release contents and known issues.
 
 Building requires Go 1.22 or newer, `CGO_ENABLED=1`, and a C compiler targeting
@@ -27,13 +25,12 @@ the same OS and architecture as Go:
 
 | Target | Build compiler | Native runtime requirements |
 | --- | --- | --- |
-| macOS arm64 | Apple clang / Xcode Command Line Tools | macOS 15.6.1+ |
+| macOS arm64 | Apple clang / Xcode Command Line Tools | macOS 15.0+ |
 | Linux amd64/arm64 | GCC or clang for the target architecture | glibc 2.28+; musl/Alpine is unsupported |
-| Windows amd64 | MinGW-w64 GCC targeting x86_64 | Microsoft Visual C++ v14 x64 runtime |
+| Windows amd64 | MinGW-w64 GCC targeting x86_64 | x64 Windows 10+, with Visual C++ runtime DLLs included in the bundle |
 
-On Windows, put MinGW-w64 GCC on `PATH`, set `CC=gcc` and `CGO_ENABLED=1`
-in the build environment. The Visual C++ runtime is needed to run the bundled
-server; it does not supply the GCC compiler needed by Go's cgo build.
+On Windows, put MinGW-w64 GCC on `PATH` and set `CC=gcc` and `CGO_ENABLED=1`
+in the build environment.
 See [support and known limitations](docs/support.md) for tested environments
 and the distinction between binary requirements and runtime verification.
 For Linux deployment to glibc 2.28, compile the cgo application against that
@@ -93,10 +90,10 @@ The repository contains four separately versioned native Go modules:
 
 | Target | Module | Bundle |
 | --- | --- | ---: |
-| macOS arm64 | `github.com/oceanbase/seekdb-go/native/darwin-arm64` | 52.0 MB |
-| Linux amd64 | `github.com/oceanbase/seekdb-go/native/linux-amd64` | 53.6 MB |
-| Linux arm64 | `github.com/oceanbase/seekdb-go/native/linux-arm64` | 49.2 MB |
-| Windows amd64 | `github.com/oceanbase/seekdb-go/native/windows-amd64` | 64.9 MB |
+| macOS arm64 | `github.com/oceanbase/seekdb-go/native/darwin-arm64` | 48.6 MB |
+| Linux amd64 | `github.com/oceanbase/seekdb-go/native/linux-amd64` | 53.9 MB |
+| Linux arm64 | `github.com/oceanbase/seekdb-go/native/linux-arm64` | 49.1 MB |
+| Windows amd64 | `github.com/oceanbase/seekdb-go/native/windows-amd64` | 48.5 MB |
 
 Each module carries a `bundle.tar.gz` with a prebuilt seekdb executable,
 `libseekdb` shared library, and required runtime libraries. The `.so`/`.dylib`/`.dll`
@@ -114,8 +111,10 @@ platform. A new native release uses a new module tag;
 existing `go.mod` and `go.sum` files keep applications on their selected
 version until they upgrade it.
 
-The current bundles use seekdb 1.4.0.0-r1 runtime files. The Linux bundles
-include OpenSSL 1.1, libaio, and zlib.
+The bundles in this checkout are the four `libseekdb` archives from
+[seekdb-bindings v1.4.1](https://github.com/oceanbase/seekdb-bindings/releases/tag/v1.4.1).
+They contain seekdb 1.4.1.0, its runtime resources and licenses, and the build
+provenance in `BUILD-INFO.json`.
 CI runs `Open`, `ConnectionOptions`, `Close`, and reopen tests on all four target
 platforms using checked-out bundles. CI also always tests downloaded native
 modules with the workspace disabled. A separate public-install workflow uses
