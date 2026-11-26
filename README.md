@@ -128,10 +128,10 @@ the shipped Windows bundle and current integration coverage use TCP.
 
 | Bundle | SHA-256 |
 | --- | --- |
-| macOS arm64 bundle | `8267306ccd5e38076df790b025f01b0f403f9524bc98529573eac0e305e8c583` |
-| Linux amd64 bundle | `73bae794192b643a4b836cedb1b7f6dd5b7fa5210654d57b804bdc74fe2d1cc7` |
-| Linux arm64 bundle | `91b28ab4e0c4c15bab1c7972aec212c9aaee19bc0ce57e25fbff62d2763ca647` |
-| Windows amd64 bundle | `3a50225198ac67f26f1777dd02cd6a5357ceb0a7ed33fa78db05a2e7a33af295` |
+| macOS arm64 bundle | `c56a78f9b8deb391d9ec6b50033378a671f5cb1f46c6ce14b191859ed0718eda` |
+| Linux amd64 bundle | `55fbd0f5e70f570f29483cadb36306f4462893bf1abc8db2dddb70a163ad3450` |
+| Linux arm64 bundle | `5e564f7103f44e176db8759d3f22a0555c9d31bbc4bb81b891211b555aac79ae` |
+| Windows amd64 bundle | `f135d04bf52f98e06eca07cb469a7fd56fd6c842328756dc8b0cdcb297ab7728` |
 
 ## Cache cleanup
 
