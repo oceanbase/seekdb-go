@@ -4,7 +4,9 @@
 import argparse
 import hashlib
 import re
+import shutil
 import tarfile
+import tempfile
 from pathlib import Path
 
 from build_release_bundles import LABELS
@@ -19,6 +21,24 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: source.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def verify_sdk(platform: str, archive: tarfile.TarFile, entries: dict[str, tarfile.TarInfo],
+               bundle_hash: str, input_root: Path | None) -> None:
+    if "BUILD-INFO.json" not in entries or "SHA256SUMS" not in entries:
+        raise ValueError(f"{platform}: C SDK provenance or checksums are missing")
+    if input_root is not None and sha256_file(input_root / platform / "bundle.tar.gz") != bundle_hash:
+        raise ValueError(f"{platform}: bundle differs from supplied C SDK archive")
+    with tempfile.TemporaryDirectory() as directory:
+        for filename in PLATFORMS[platform]:
+            name = f"lib/{filename}"
+            entry = entries.get(name)
+            if entry is None or not entry.size or (platform != "windows-amd64" and not entry.mode & 0o111):
+                raise ValueError(f"{platform}: missing or unusable C SDK binary {name}")
+            path = Path(directory) / filename
+            with archive.extractfile(entry) as source, path.open("wb") as destination:
+                shutil.copyfileobj(source, destination)
+            verify_machine(platform, path)
 
 
 def verify(platform: str, readme: str, input_root: Path | None) -> None:
@@ -38,11 +58,21 @@ def verify(platform: str, readme: str, input_root: Path | None) -> None:
     with tarfile.open(archive_path, "r:gz") as archive:
         entries = {}
         for entry in archive:
-            if (not entry.isfile() or not entry.name or
-                    entry.name in (".", "..") or "/" in entry.name or "\\" in entry.name or
-                    entry.name in entries or entry.size == 0):
+            if (any(part in ("", ".", "..") for part in entry.name.split("/")) or
+                    any(char in entry.name for char in ("\\", ":")) or entry.name == ".seekdb-bundle.json"):
+                raise ValueError(f"{platform}: invalid bundle entry {entry.name!r}")
+            if entry.isdir():
+                continue
+            if not entry.isfile() or entry.name in entries:
                 raise ValueError(f"{platform}: invalid bundle entry {entry.name!r}")
             entries[entry.name] = entry
+        if f"lib/{library}" in entries:
+            verify_sdk(platform, archive, entries, actual, input_root)
+            print(f"{platform}: verified {actual}")
+            return
+        for name, entry in entries.items():
+            if "/" in name or entry.size == 0:
+                raise ValueError(f"{platform}: invalid bundle entry {name!r}")
         if not required <= entries.keys():
             raise ValueError(f"{platform}: missing bundle entries {sorted(required - entries.keys())}")
 
@@ -76,7 +106,7 @@ def verify(platform: str, readme: str, input_root: Path | None) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input-root", type=Path,
-                        help="compare bundle contents with local platform runtime directories")
+                        help="compare bundles with local platform runtime directories or C SDK archives")
     args = parser.parse_args()
     input_root = args.input_root.resolve(strict=True) if args.input_root else None
     readme = (ROOT / "README.md").read_text()

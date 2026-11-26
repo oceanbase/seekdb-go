@@ -11,9 +11,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 )
 
@@ -62,16 +64,16 @@ func installBundle(root string, archive []byte) (string, error) {
 		return "", fmt.Errorf("create native cache: %w", err)
 	}
 	target := filepath.Join(root, bundleHash)
-	if bundleReady(target, bundleHash) {
-		return target, nil
+	if runtimeDir := cachedRuntimeDir(target, bundleHash); runtimeDir != "" {
+		return filepath.Join(target, runtimeDir), nil
 	}
 	unlock, err := lockNativeCache(root)
 	if err != nil {
 		return "", fmt.Errorf("lock native cache: %w", err)
 	}
 	defer unlock()
-	if bundleReady(target, bundleHash) {
-		return target, nil
+	if runtimeDir := cachedRuntimeDir(target, bundleHash); runtimeDir != "" {
+		return filepath.Join(target, runtimeDir), nil
 	}
 	temp, err := os.MkdirTemp(root, ".extract-")
 	if err != nil {
@@ -81,7 +83,8 @@ func installBundle(root string, archive []byte) (string, error) {
 	if err := extractArchive(temp, archive, bundleHash); err != nil {
 		return "", err
 	}
-	if !bundleReady(temp, bundleHash) {
+	runtimeDir := cachedRuntimeDir(temp, bundleHash)
+	if runtimeDir == "" {
 		return "", errors.New("native bundle extraction failed validation")
 	}
 	if err := os.RemoveAll(target); err != nil {
@@ -90,57 +93,66 @@ func installBundle(root string, archive []byte) (string, error) {
 	if err := os.Rename(temp, target); err != nil {
 		return "", fmt.Errorf("install native bundle: %w", err)
 	}
-	return target, nil
+	return filepath.Join(target, runtimeDir), nil
 }
 
 func validBundleName(name string) bool {
-	return name != "" && name != "." && name != ".." && name != manifestName &&
-		!strings.ContainsAny(name, `/\\`)
+	return name != "." && name != manifestName && fs.ValidPath(name) &&
+		!strings.ContainsAny(name, `\:`) && filepath.IsLocal(filepath.FromSlash(name))
 }
 
-func bundleReady(dir, bundleHash string) bool {
+func cachedRuntimeDir(dir, bundleHash string) string {
+	if info, err := os.Lstat(dir); err != nil || !info.IsDir() {
+		return ""
+	}
 	data, err := os.ReadFile(filepath.Join(dir, manifestName))
 	if err != nil {
-		return false
+		return ""
 	}
 	var manifest bundleManifest
 	if err := json.Unmarshal(data, &manifest); err != nil || manifest.BundleSHA256 != bundleHash {
-		return false
+		return ""
 	}
-	for _, name := range []string{platformLibrary(), platformExecutable(), platformServerBinary()} {
-		if name == "" {
-			return false
-		}
-		if _, ok := manifest.Files[name]; !ok {
-			return false
+	runtimeDir := "."
+	required := []string{platformLibrary(), platformExecutable(), platformServerBinary()}
+	if _, ok := manifest.Files["lib/"+platformLibrary()]; ok {
+		runtimeDir = "lib"
+		required = []string{"lib/" + platformLibrary(), "lib/" + platformExecutable()}
+	}
+	for _, name := range required {
+		if _, ok := manifest.Files[name]; !ok || name == "" {
+			return ""
 		}
 	}
 	for name, expected := range manifest.Files {
 		if !validBundleName(name) || expected.Size < 0 {
-			return false
+			return ""
 		}
-		path := filepath.Join(dir, name)
+		path := filepath.Join(dir, filepath.FromSlash(name))
+		for parent := filepath.Dir(path); parent != dir; parent = filepath.Dir(parent) {
+			if info, err := os.Lstat(parent); err != nil || !info.IsDir() {
+				return ""
+			}
+		}
 		info, err := os.Lstat(path)
 		if err != nil || !info.Mode().IsRegular() || info.Size() != expected.Size {
-			return false
+			return ""
 		}
-		if runtime.GOOS != "windows" &&
-			(name == platformLibrary() || name == platformExecutable() || name == platformServerBinary()) &&
-			info.Mode().Perm()&0111 == 0 {
-			return false
+		if runtime.GOOS != "windows" && slices.Contains(required, name) && info.Mode().Perm()&0111 == 0 {
+			return ""
 		}
 		file, err := os.Open(path)
 		if err != nil {
-			return false
+			return ""
 		}
 		hash := sha256.New()
 		_, copyErr := io.Copy(hash, file)
 		closeErr := file.Close()
 		if copyErr != nil || closeErr != nil || hex.EncodeToString(hash.Sum(nil)) != expected.SHA256 {
-			return false
+			return ""
 		}
 	}
-	return true
+	return runtimeDir
 }
 
 func extractArchive(dir string, archive []byte, bundleHash string) error {
@@ -167,11 +179,18 @@ func extractArchive(dir string, archive []byte, bundleHash string) error {
 			return fmt.Errorf("read native bundle entry: %w", err)
 		}
 		name := header.Name
+		if header.Typeflag == tar.TypeDir && validBundleName(strings.TrimSuffix(name, "/")) {
+			continue
+		}
 		if !validBundleName(name) || header.Typeflag != tar.TypeReg {
 			return fmt.Errorf("invalid native bundle entry %q", name)
 		}
+		path := filepath.Join(dir, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+			return fmt.Errorf("create directory for native file %q: %w", name, err)
+		}
 		mode := os.FileMode(header.Mode) & 0777
-		file, err := os.OpenFile(filepath.Join(dir, name), os.O_WRONLY|os.O_CREATE|os.O_EXCL, mode)
+		file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, mode)
 		if err != nil {
 			return fmt.Errorf("create native file %q: %w", name, err)
 		}

@@ -2,27 +2,20 @@
 
 ## Platforms
 
-The native `v1.4.0` modules embed seekdb 1.4.0.0-r1. Go 1.22+ and cgo are
+The native `v1.4.1` modules embed seekdb 1.4.1.0. Go 1.22+ and cgo are
 required. The runtime defaults to `memory_budget=1G` and `log_disk_size=2G`
 on first initialization; allow additional process memory and disk space.
 
 | Platform | Binary requirement | Functional verification environment |
 | --- | --- | --- |
-| macOS arm64 | macOS 15.6.1+ | CI: macos-26; manual: macOS 27.0.1, Apple clang 17 |
-| Linux amd64 | glibc 2.28+ | CI: Ubuntu 24.04; manual: Alibaba Cloud Linux 3/glibc 2.32/GCC 9.4 and AlmaLinux 8 container/glibc 2.28/GCC 8.5 |
+| macOS arm64 | macOS 15.0+ | CI: macos-26 |
+| Linux amd64 | glibc 2.28+ | CI: Ubuntu 24.04 |
 | Linux arm64 | glibc 2.28+ | CI: Ubuntu 24.04 arm64 |
-| Windows amd64 | x64 Windows with Microsoft Visual C++ v14 x64 runtime | CI: windows-2025; manual: Windows 11 26H2, MinGW GCC 16.2 |
+| Windows amd64 | x64 Windows 10 or later | CI: windows-2025 |
 
-The macOS and glibc floors describe native binary requirements. The amd64 SQL
-suite was compiled and run inside the AlmaLinux 8 container on 2026-10-22,
-including transactions, vectors, shared handles and reopen persistence. This
-verifies the glibc 2.28 userland on the dev host's Linux 5.10 kernel; it does not
-qualify older kernels. The macOS 15.6.1 runtime floor and arm64 glibc 2.28
-userland have not been exercised directly. Newer CI systems do not establish
-minimum-version compatibility. Windows versions older than the environments listed
-above have not been qualified; this SDK does not claim support for every
-Windows release. macOS amd64, Windows arm64 and musl/Alpine bundles are not
-provided.
+The binary requirements come from the published C SDK build manifests. The
+runner versions in the table are the environments exercised by Go CI. The
+available bundles cover macOS arm64, Linux glibc amd64/arm64 and Windows amd64.
 
 A Linux application built with cgo also inherits requirements from its build
 compiler and libc. Build against the oldest glibc you intend to support. For
@@ -55,11 +48,11 @@ The current bundle does not exercise the optional named-pipe client adapter.
 
 ## Known startup limitations
 
-- Windows fresh-database bootstrap can intermittently fail with native
+- The v1.4.0 Windows bundle could intermittently fail fresh-database bootstrap with native
   `OB_TIMEOUT (-4012)`, after which the server exits before becoming ready.
   It is tracked in [seekdb #1544](https://github.com/oceanbase/seekdb/issues/1544).
   A later successful run does not establish that this native issue is fixed.
-- A macOS first-execution failure was associated with interrupted system trust
+- A v1.4.0 macOS first-execution failure was associated with interrupted system trust
   assessment. Later runs passed, but a clean-system first-execution validation
   is still outstanding. The current executable uses an ad-hoc signature;
   signature integrity is separate from distribution trust. No workaround that

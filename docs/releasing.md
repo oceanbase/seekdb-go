@@ -4,7 +4,28 @@ Run the commands below from the repository root with Python 3.10+ and Go 1.22+.
 For the local Go workspace and
 checks to run before releasing, see [Development](development.md).
 
-Builds take local runtime files. Arrange them by target platform, with the
+## Published C SDK inputs
+
+Download the four desktop `libseekdb` archives from the corresponding
+[seekdb-bindings release](https://github.com/oceanbase/seekdb-bindings/releases).
+Check each archive against the release asset digest and record the engine and
+bindings commits from `BUILD-INFO.json`. Save the archives as `bundle.tar.gz`
+under `release-inputs/darwin-arm64/`, `release-inputs/linux-amd64/`,
+`release-inputs/linux-arm64/`, and `release-inputs/windows-amd64/`.
+
+```sh
+python3 scripts/build_release_bundles.py /path/to/release-inputs
+python3 scripts/verify_bundles.py --input-root /path/to/release-inputs
+```
+
+The build copies those archives and updates the README checksums. The verifier
+compares the committed archives with the supplied bytes and checks the target
+architectures. Keeping the full C SDK preserves its runtime layout, notices and
+provenance.
+
+## Locally built inputs
+
+To package local runtime files, arrange them by target platform, with the
 seekdb executable, the matching `libseekdb` shared library, and all required
 runtime libraries in each directory:
 
@@ -48,14 +69,16 @@ input verifier reads thin and universal Mach-O headers in Python and compares
 the input files with the committed archive bytes. The lipo/otool dependency
 checks remain part of macOS packaging and dependency collection.
 Update the platform license and notice files when runtime dependencies change.
+
+## Publish tags
+
 Each platform module has its own `go.mod` and is published by a tag prefixed
 with its directory, for example
 `native/linux-amd64/v1.4.0`. The root module uses a root tag such as `v1.4.0`.
 Publish changed native bundles under new, immutable versions.
 
-The native dependencies use the published `v1.4.0` platform-module tags. Keep
-the dependency versions and their generated `go.sum` checksums committed before
-publishing a root-module release.
+Keep the native dependency versions and their generated `go.sum` checksums
+committed before publishing a root-module release.
 
 Publishing has two stages:
 
@@ -64,22 +87,14 @@ Publishing has two stages:
    `scripts/release.sh ROOT_VERSION NATIVE_VERSION /path/to/release-inputs [REMOTE]`.
    It verifies the inputs, publishes the four immutable native tags, and updates
    `go.mod`/`go.sum` using direct fetching. If dependencies change, it stops
-   **before publishing the root tag**. Commit the dependency files through a PR.
+   **before publishing the root tag**. Run `GOWORK=off go mod tidy` in
+   `examples/sql` and commit both modules' `go.mod` and `go.sum` through a PR.
 2. After merging that PR, wait for both Test and **Public install validation**
    on the exact main commit. The latter downloads the root commit through
    `proxy.golang.org` with `sum.golang.org`, using a separate consumer and fresh
    caches, and checks SQL persistence on all four platforms. Rerun the release
    command from that commit. It refuses root publication unless the latest main
    push runs of both workflows succeeded, and checks that remote main still matches.
-
-For the first root release, the prepared versions are root `v1.4.0` and native
-`v1.4.0`. The four native tags already exist; the root release reuses their
-unchanged contents. The versioned notes are in [CHANGELOG](../CHANGELOG.md).
-Once the exact main commit has passed both workflows, use:
-
-```sh
-scripts/release.sh v1.4.0 v1.4.0 /path/to/release-inputs
-```
 
 Updating the release notes does not publish the root tag. Run the command only
 when ready to publish, then complete the tag and `latest` installation checks
@@ -103,18 +118,16 @@ Before announcing a release:
   chosen root version. Include the pinned native versions and known upstream
   issues; a native version is not the Go API's version.
 - Check [support](support.md) against the actual release evidence. Record which
-  minimum-version environments were exercised. A newer runner does not validate
-  the macOS 15.6.1 or glibc 2.28 runtime floor, and unqualified environments must
-  not be presented as verified.
+  minimum-version environments were exercised. Report the runner version and
+  the binary requirement separately.
 - Preserve input provenance with the release artifacts: seekdb and libseekdb
   source revisions, native build identifiers, compiler/SDK versions, dependency
   versions, platform input hashes and final bundle hashes. The existing
   prebuilt archives do not by themselves establish their source revisions or
   complete build-tool versions; obtain those from the producer rather than
   inferring them from the module tag.
-- Review each platform's LICENSE/NOTICE files when changing dependencies.
-  The current Linux archives include the OpenSSL 1.1 family; record the exact
-  dependency versions from the supplied build before replacing those inputs.
+- Review the `licenses/` inventory in each supplied C SDK archive and the
+  platform module's LICENSE and NOTICE when changing dependencies.
 
 The bootstrap issue in [seekdb #1544](https://github.com/oceanbase/seekdb/issues/1544)
 is tracked as a native known issue. Keep that disclosure when publishing a Go

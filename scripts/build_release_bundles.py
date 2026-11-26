@@ -4,6 +4,7 @@
 import argparse
 import hashlib
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -59,11 +60,16 @@ def main() -> None:
         if not native_dir.is_dir():
             parser.error(f"missing platform input directory: {native_dir}")
         output = output_root / platform / "bundle.tar.gz"
-        subprocess.run(
-            [sys.executable, str(ROOT / "scripts/package_native.py"),
-             platform, str(native_dir), str(output)],
-            check=True,
-        )
+        sdk_archive = native_dir / "bundle.tar.gz"
+        if sdk_archive.is_file():
+            output.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(sdk_archive, output)
+        else:
+            subprocess.run(
+                [sys.executable, str(ROOT / "scripts/package_native.py"),
+                 platform, str(native_dir), str(output)],
+                check=True,
+            )
         checksums[platform] = sha256(output)
         print(f"{platform}: SHA-256 {checksums[platform]}")
     if args.output_root is None:
