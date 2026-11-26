@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.4.1
+
+- Embed SeekDB 1.4.1.0 from `ab58f3d233bc` and libseekdb from `0d1cd473db05`.
+- Pin all four platform modules at `v1.4.1`. Each bundle preserves the official
+  C SDK layout, runtime resources and license notices.
+
+SeekDB 1.4.1 changes the local storage format. Export schema and data from the
+earlier engine, then import them into a new 1.4.1 database. See the
+[SeekDB upgrade notes](https://github.com/oceanbase/seekdb/releases/tag/v1.4.1#upgrade-notes).
+
 ## v1.4.0
 
 Initial Go SDK release for seekdb 1.4.0.0-r1.
