@@ -13,12 +13,15 @@ go get github.com/oceanbase/seekdb-go@latest
 To pin a version of the root module:
 
 ```sh
-go get github.com/oceanbase/seekdb-go@v1.4.0
+go get github.com/oceanbase/seekdb-go@v1.4.1
 ```
 
 The root SDK pins all four native modules, with checksums in `go.sum`. Root SDK
 and native versions are independent, so a Go-only release can reuse existing native versions.
 See the [changelog](CHANGELOG.md) for the release contents and known issues.
+
+SeekDB 1.4.1 changes the local storage format. Export data from the earlier
+engine and import it into a new 1.4.1 database. See the [upgrade notes](https://github.com/oceanbase/seekdb/releases/tag/v1.4.1#upgrade-notes).
 
 Building requires Go 1.22 or newer, `CGO_ENABLED=1`, and a C compiler targeting
 the same OS and architecture as Go:

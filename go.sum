@@ -1,8 +1,8 @@
-github.com/oceanbase/seekdb-go/native/darwin-arm64 v1.4.0 h1:8Bl7Qq0i0P+WyfTw/utGIiP7uYg2ucBms6erX7d8Wx0=
-github.com/oceanbase/seekdb-go/native/darwin-arm64 v1.4.0/go.mod h1:PpAFEE3avX+g6h6YC93N6bdk/EgDpK3jYIKdR1SE+ng=
-github.com/oceanbase/seekdb-go/native/linux-amd64 v1.4.0 h1:VmNPuCw1fT28+B9SHRSoOaVmVYP0mW3eN8GgIusveXw=
-github.com/oceanbase/seekdb-go/native/linux-amd64 v1.4.0/go.mod h1:abpv7arQNzokc1zqUXDAZimVqA17HxsokLCleIw1nOs=
-github.com/oceanbase/seekdb-go/native/linux-arm64 v1.4.0 h1:7391aFiybN4TxS5SKq5jJyS7leJf/9QXFN47z9bORt0=
-github.com/oceanbase/seekdb-go/native/linux-arm64 v1.4.0/go.mod h1:U6ZcWM2QzkiwE4Qkp+WnhLG+ntDKYtyN+rrfcLjG6ik=
-github.com/oceanbase/seekdb-go/native/windows-amd64 v1.4.0 h1:dDpe9kpliS/PaY5FrXbHdYBw+WHn9hHZlcaFbH7UDoA=
-github.com/oceanbase/seekdb-go/native/windows-amd64 v1.4.0/go.mod h1:URCEyRIQtMQ+2vs2xs8khzidOZ/sI+Wqu0UGO/ANR+A=
+github.com/oceanbase/seekdb-go/native/darwin-arm64 v1.4.1 h1:3Z6B7XuOH9kPSEva3XPx1o85COC3lxf7tKl17h8n5f8=
+github.com/oceanbase/seekdb-go/native/darwin-arm64 v1.4.1/go.mod h1:PpAFEE3avX+g6h6YC93N6bdk/EgDpK3jYIKdR1SE+ng=
+github.com/oceanbase/seekdb-go/native/linux-amd64 v1.4.1 h1:bV4GQ+ImOcrkFYEVHkuCiltNRVNkTr/14/6bfgPMGpU=
+github.com/oceanbase/seekdb-go/native/linux-amd64 v1.4.1/go.mod h1:abpv7arQNzokc1zqUXDAZimVqA17HxsokLCleIw1nOs=
+github.com/oceanbase/seekdb-go/native/linux-arm64 v1.4.1 h1:Kd2+oQdx0rJfSs3s8FKNtiDdA+CksBCMXE/8MkBc8Yo=
+github.com/oceanbase/seekdb-go/native/linux-arm64 v1.4.1/go.mod h1:U6ZcWM2QzkiwE4Qkp+WnhLG+ntDKYtyN+rrfcLjG6ik=
+github.com/oceanbase/seekdb-go/native/windows-amd64 v1.4.1 h1:vCOdXANCfRqghQ2IOp6n7mYW4ziWqFtkaoTknLCl60U=
+github.com/oceanbase/seekdb-go/native/windows-amd64 v1.4.1/go.mod h1:URCEyRIQtMQ+2vs2xs8khzidOZ/sI+Wqu0UGO/ANR+A=
