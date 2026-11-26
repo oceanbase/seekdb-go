@@ -1,0 +1,19 @@
+.github/workflows/stage-go-1.4.1.yml
+  s_5b4e273885bb1f::t_8852a6897dd157 1-76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "37f91e486310b231d49ebb6bd9aeaee921af98e4",
+  "prompts": {},
+  "sessions": {
+    "s_5b4e273885bb1f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a21750-a16e-7000-862c-b1a578042c87",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "wangyunlai.wyl <wangyunlai.wyl@U-Y44N21LQ-2319.local>"
+    }
+  }
+}
